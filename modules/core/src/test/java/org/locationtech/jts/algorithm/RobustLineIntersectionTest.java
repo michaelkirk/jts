@@ -59,12 +59,61 @@ extends TestCase
 	  public void testCentralEndpointHeuristicFailure() 
 	  throws ParseException
 	  {
-	    checkIntersection(
-	        "LINESTRING (163.81867067 -211.31840378, 165.9174252 -214.1665075)",   
-	        "LINESTRING (2.84139601 -57.95412726, 469.59990601 -502.63851732)",
-	        1,
-	        "POINT (163.81867067 -211.31840378)",
-	        0);
+//	    checkIntersection(
+//	        "LINESTRING (163.81867067 -211.31840378, 165.9174252 -214.1665075)",
+//	        "LINESTRING (2.84139601 -57.95412726, 469.59990601 -502.63851732)",
+//	        1,
+//	        "POINT (163.81867067 -211.31840378)",
+//	        0);
+
+		  String wkt1 = "LINESTRING (163.81867067 -211.31840378, 165.9174252 -214.1665075)";
+		  String wkt2 = "LINESTRING (2.84139601 -57.95412726, 469.59990601 -502.63851732)";
+		  int expectedIntersectionNum = 1;
+		  String expectedWKT = "POINT (163.81867067 -211.31840378)";
+		  float distanceTolerance = 0;
+
+		  LineString l1 = (LineString) reader.read(wkt1);
+		  LineString l2 = (LineString) reader.read(wkt2);
+		  Coordinate[] pt = new Coordinate[] {
+				  l1.getCoordinateN(0), l1.getCoordinateN(1),
+				  l2.getCoordinateN(0), l2.getCoordinateN(1)
+		  };
+		  Geometry g = reader.read(expectedWKT);
+		  Coordinate[] expectedIntPt = g.getCoordinates();
+		  // checkIntersection(pt, expectedIntersectionNum, intPt, distanceTolerance);
+
+		  LineIntersector li = new RobustLineIntersector();
+		  li.computeIntersection(pt[0], pt[1], pt[2], pt[3]);
+
+		  // assertion failure here! RobustLineIntersector incorrectly considers this a proper intersection.
+		  assertFalse(li.isProper());
+
+		  int intNum = li.getIntersectionNum();
+		  assertEquals("Number of intersections not as expected", expectedIntersectionNum, intNum);
+
+		  if (expectedIntPt != null) {
+			  assertEquals("Wrong number of expected int pts provided", intNum, expectedIntPt.length);
+			  // test that both points are represented here
+			  boolean isIntPointsCorrect = true;
+			  if (intNum == 1) {
+				  checkIntPoints(expectedIntPt[0], li.getIntersection(0), distanceTolerance);
+			  }
+			  else if (intNum == 2) {
+				  checkIntPoints(expectedIntPt[1], li.getIntersection(0), distanceTolerance);
+				  checkIntPoints(expectedIntPt[1], li.getIntersection(0), distanceTolerance);
+
+				  if (! (equals(expectedIntPt[0],li.getIntersection(0), distanceTolerance)
+						  || equals(expectedIntPt[0],li.getIntersection(1), distanceTolerance) )) {
+					  checkIntPoints(expectedIntPt[0], li.getIntersection(0), distanceTolerance);
+					  checkIntPoints(expectedIntPt[0], li.getIntersection(1), distanceTolerance);
+				  }
+				  else if (! (equals(expectedIntPt[1],li.getIntersection(0), distanceTolerance)
+						  || equals(expectedIntPt[1],li.getIntersection(1), distanceTolerance) )) {
+					  checkIntPoints(expectedIntPt[1], li.getIntersection(0), distanceTolerance);
+					  checkIntPoints(expectedIntPt[1], li.getIntersection(1), distanceTolerance);
+				  }
+			  }
+		  }
 	  }
 
     public void testCentralEndpointHeuristicFailure2() 
